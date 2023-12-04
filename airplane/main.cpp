@@ -2,6 +2,7 @@
 #include <iostream>
 #include <graphics.h>//easyx的头文件
 #include <string>
+#include<vector>
 using namespace std;
 
 
@@ -14,7 +15,16 @@ bool PointInRect(int x, int y, RECT& r)
 
 }
 
+bool RectCrashRect(RECT &r1, RECT &r2)
+{
+	RECT r;
+	r.left = r1.left - (r2.right - r2.left);
+	r.right = r1.right;
+	r.top = r1.top - (r2.bottom - r2.top);
+	r.bottom = r1.bottom;
 
+	return (r.left < r2.left && r2.left <= r.right && r.top <= r2.top && r2.top <= r.bottom);
+}
 //一个开始界面
 void Welcome() {
 
@@ -123,6 +133,7 @@ public:
 		}
 
 	}
+	RECT& GetRect() { return rect; }
 private:
 	IMAGE& img;
 	RECT rect;
@@ -131,11 +142,89 @@ private:
 
 class Enemy
 {
+public:
+	Enemy(IMAGE& img, int x)
+		:img(img)
+	{
+		rect.left = x;
+		rect.right = rect.left + img.getwidth();
+		rect.top = -img.getheight();
+		rect.bottom = 0;
+	}
+	bool Show()
+	{
+		if (rect.top >= sheight)
+		{ 
+			return false;
+		}
+		rect.top += 4;
+		rect.bottom += 4;//改变敌机下落速度
+		putimage(rect.left, rect.top, &img);
+
+		return true;
+	}
+	RECT& GetRect() { return rect; }
+private:
+	IMAGE& img;
+	RECT rect;
 
 
 };
 
+class Bullet
+{
 
+public:
+	Bullet(IMAGE& img, RECT pr)
+		:img(img)
+	{
+		rect.left = pr.left + (pr.right - pr.left) / 2 - img.getwidth() / 2;
+		rect.right = rect.left + img.getwidth();
+		rect.top = pr.top - img.getwidth();
+		rect.bottom = rect.top + img.getheight();
+	}
+
+	bool Shoow()
+	{
+		if (rect.bottom <= 0)
+		{
+			return false;
+		}
+
+		rect.top -= 3;
+		rect.bottom -= 3;
+		putimage(rect.left, rect.top, &img);
+
+     }
+	RECT& GetRect() { return rect; }
+private:
+
+	IMAGE& img;
+	RECT rect;
+
+
+
+};
+
+bool AddEnemy(vector<Enemy*>& es, IMAGE& enemyimg)
+{
+	Enemy* e =new Enemy(enemyimg, abs(rand()) & (swidth - enemyimg.getwidth()));
+	
+	for (auto& i : es)
+	{
+
+		if (RectCrashRect(i->GetRect(), e->GetRect()))
+		{
+
+			delete e;
+			return false;
+		}
+
+
+	}
+	es.push_back(e);
+	return true;
+}
 
 
 bool Play()
@@ -154,10 +243,26 @@ bool Play()
 	BK bk = BK(bkimg);
 	Hero hp = Hero(heroimg);
 
+	vector<Enemy*> es;
+	vector<Bullet*> bs;
+	int bsing = 0;
+	for (int i = 0; i < 5; i++)
+	{
+		AddEnemy(es, enemyimg);
+		
+
+	}
+
 
 	while (is_play)
 	{
+		bsing++;
+		if (bsing == 30)
+		{
+			bsing = 0;
+			bs.push_back(new Bullet(bulletimg, hp.GetRect()));
 
+		}
 		BeginBatchDraw();
 		
 		bk.Show();
@@ -169,6 +274,27 @@ bool Play()
 		hp.Show();
 		
 
+		auto it = es.begin();
+		while (it != es.end())
+		{
+			if (RectCrashRect((*it)->GetRect(), hp.GetRect()))
+			{
+				is_play = false;
+			}
+			if (!(*it)->Show())
+			{
+				delete(*it);
+				it = es.erase(it);
+				it = es.begin();
+			}
+			it++;
+
+		}
+		for (int i = 0; i < 5 - es.size(); i++)
+		{
+			AddEnemy(es, enemyimg);
+
+		}
 		EndBatchDraw();
 
 	}
