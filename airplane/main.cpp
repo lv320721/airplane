@@ -257,7 +257,7 @@ bool Play()
 	while (is_play)
 	{
 		bsing++;
-		if (bsing == 30)
+		if (bsing == 10)
 		{
 			bsing = 0;
 			bs.push_back(new Bullet(bulletimg, hp.GetRect()));
@@ -273,6 +273,14 @@ bool Play()
 		
 		hp.Show();
 		
+		for (auto& i : bs)
+		{
+			i->Shoow();
+
+		}
+
+
+
 
 		auto it = es.begin();
 		while (it != es.end())
@@ -295,7 +303,7 @@ bool Play()
 					break;
 
 				}
-
+				bit++;
 
 			}
 			if (!(*it)->Show())
