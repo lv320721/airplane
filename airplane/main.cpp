@@ -281,6 +281,23 @@ bool Play()
 			{
 				is_play = false;
 			}
+
+			auto bit = bs.begin();
+			while (bit != bs.end())
+			{
+				if (RectCrashRect((*bit)->GetRect(), (*it)->GetRect()))
+				{
+					delete(*it);
+					it = es.erase(it);
+					it = es.begin();
+					delete(*bit);
+					bs.erase(bit);
+					break;
+
+				}
+
+
+			}
 			if (!(*it)->Show())
 			{
 				delete(*it);
