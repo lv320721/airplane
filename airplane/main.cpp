@@ -3,6 +3,7 @@
 #include <graphics.h>//easyx的头文件
 #include <string>
 #include<vector>
+#include<conio.h>
 using namespace std;
 
 
@@ -77,6 +78,40 @@ void Welcome() {
 	Sleep(100);
 
 };
+
+
+//一个游戏结束界面
+
+void Over(unsigned long long &kill) 
+{
+
+	TCHAR* str = new TCHAR[128];
+	_stprintf_s(str, 128, _T("击杀数：%llu"), kill);
+
+	settextcolor(RED);//“击杀数”颜色
+
+	outtextxy(swidth / 2 - textwidth(str) / 2, sheight / 5, str);
+
+	//键盘导航
+	LPCTSTR info = _T("按Enter返回");
+	settextstyle(20, 0, _T("黑体"));
+	outtextxy(swidth - textwidth(info), sheight - textheight(info), info);
+
+	while (true)
+	{
+		ExMessage mess;
+		getmessage(&mess, EX_KEY);
+		if (mess.vkcode == 0x0D)
+		{
+
+			return;
+		}
+
+
+	}
+
+
+}
 
 //背景、敌机、英雄、子弹
 
@@ -246,6 +281,8 @@ bool Play()
 	vector<Enemy*> es;
 	vector<Bullet*> bs;
 	int bsing = 0;
+
+	unsigned long long kill = 0;
 	for (int i = 0; i < 5; i++)
 	{
 		AddEnemy(es, enemyimg);
@@ -270,6 +307,16 @@ bool Play()
 		flushmessage();
 		Sleep(2);
 		hp.Control();
+		if (_kbhit())
+		{
+			char v = _getch();
+			if (v == 0x20)
+			{
+				Sleep(500);
+				while (!_kbhit());//如果没用键盘消息一直动，没有阻塞
+			}
+
+		}
 		
 		hp.Show();
 		
@@ -300,6 +347,8 @@ bool Play()
 					it = es.begin();
 					delete(*bit);
 					bs.erase(bit);
+
+					kill++;
 					break;
 
 				}
@@ -323,6 +372,7 @@ bool Play()
 		EndBatchDraw();
 
 	}
+	Over(kill);
 	return true;
 };
 
