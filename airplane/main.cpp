@@ -10,6 +10,9 @@ using namespace std;
 constexpr auto swidth =  600;
 constexpr auto sheight = 1100;
 
+constexpr unsigned int SHP = 4;
+constexpr auto hurttime = 1000;//ms
+
 bool PointInRect(int x, int y, RECT& r)
 {
 	return (r.left <= x && x <= r.right && r.top <= y && y <= r.bottom);
@@ -50,7 +53,7 @@ void Welcome() {
 
 	texitr.left = swidth / 2-textwidth(texit)/2;
 	texitr.right = texitr.left + textheight(texit);
-	texitr.top = sheight /5*3;
+	texitr.top = sheight /5 * 3;
 	texitr.bottom = texitr.top + textheight(texit);
 
 	outtextxy(tplayr.left, tplayr.top,tplay);
@@ -74,8 +77,8 @@ void Welcome() {
 			}
 		}
 
-	};
-	Sleep(100);
+	}
+	
 
 };
 
@@ -85,6 +88,7 @@ void Welcome() {
 void Over(unsigned long long &kill) 
 {
 
+	printf_s("o");
 	TCHAR* str = new TCHAR[128];
 	_stprintf_s(str, 128, _T("击杀数：%llu"), kill);
 
@@ -113,7 +117,7 @@ void Over(unsigned long long &kill)
 
 }
 
-//背景、敌机、英雄、子弹
+//背景、敌机、英雄、子弹类
 
 class BK 
 {
@@ -140,7 +144,7 @@ class Hero
 {
 public:
 	Hero(IMAGE& img)
-		:img(img)
+		:img(img), HP(SHP)
 	{
 		rect.left = swidth / 2 - img.getwidth() / 2;
 		rect.top = sheight - img.getheight();
@@ -150,9 +154,11 @@ public:
 	}
 	void Show()
 	{
+		setlinecolor(RED);
+		setlinestyle(PS_SOLID, 4);
 
 		putimage(rect.left, rect.top, &img);
-
+		line(rect.left, rect.top - 5, rect.left + (img.getwidth() / SHP * HP), rect.top - 5);
 	}
 	void Control()
 	{
@@ -168,26 +174,48 @@ public:
 		}
 
 	}
+
+	bool hurt()
+	{
+		HP--;
+		return (HP == 0) ? false : true;
+	}
 	RECT& GetRect() { return rect; }
 private:
 	IMAGE& img;
 	RECT rect;
-
+	unsigned int HP;
 };
 
 class Enemy
 {
 public:
-	Enemy(IMAGE& img, int x)
-		:img(img)
+	Enemy(IMAGE& img, int x, IMAGE*& boom)
+		:img(img), isdie(false), boomsum(0)
 	{
+		selfboom[0] = boom[0];
+		selfboom[1] = boom[1];
+		selfboom[2] = boom[2];
 		rect.left = x;
 		rect.right = rect.left + img.getwidth();
 		rect.top = -img.getheight();
 		rect.bottom = 0;
 	}
+	
 	bool Show()
 	{
+
+		if (isdie)
+		{
+			if (boomsum == 3)
+			{
+				return false;
+			}
+			putimage(rect.left, rect.top, selfboom + boomsum);
+			boomsum++;
+
+			return true;
+		}
 		if (rect.top >= sheight)
 		{ 
 			return false;
@@ -198,10 +226,20 @@ public:
 
 		return true;
 	}
+	void Isdie()
+	{
+
+		isdie = true;
+	}
 	RECT& GetRect() { return rect; }
 private:
 	IMAGE& img;
 	RECT rect;
+	IMAGE selfboom[3];
+
+
+	bool isdie;
+	int boomsum;
 
 
 };
@@ -216,10 +254,10 @@ public:
 		rect.left = pr.left + (pr.right - pr.left) / 2 - img.getwidth() / 2;
 		rect.right = rect.left + img.getwidth();
 		rect.top = pr.top - img.getwidth();
-		rect.bottom = rect.top + img.getheight();
+		rect.bottom = rect.top + img.getheight();//英雄飞机发射的子弹在英雄飞机的上分
 	}
 
-	bool Shoow()
+	bool Show()
 	{
 		if (rect.bottom <= 0)
 		{
@@ -230,9 +268,10 @@ public:
 		rect.bottom -= 3;
 		putimage(rect.left, rect.top, &img);
 
+		return true;
      }
 	RECT& GetRect() { return rect; }
-private:
+protected:
 
 	IMAGE& img;
 	RECT rect;
@@ -241,9 +280,40 @@ private:
 
 };
 
-bool AddEnemy(vector<Enemy*>& es, IMAGE& enemyimg)
+class Enemy_Bullet :public Bullet
 {
-	Enemy* e =new Enemy(enemyimg, abs(rand()) & (swidth - enemyimg.getwidth()));
+public:
+	Enemy_Bullet(IMAGE& img, RECT pr)
+		:Bullet(img, pr)
+	{
+		rect.left = pr.left + (pr.right - pr.left) / 2 - img.getwidth() / 2;
+		rect.right = rect.left + img.getwidth();
+		rect.top = pr.bottom;
+		rect.bottom = rect.top + img.getheight();//敌机的子弹在敌机的下方
+
+	}
+
+	bool Show()
+	{
+
+		if (rect.top >= sheight)//如果顶部大于等于界面的高，就判定飞出来边界
+		{
+			return false;
+		}
+
+		rect.top += 5;
+		rect.bottom += 5;//敌机向下运动，坐标改为+，运动坐标不一致，造成速度差的效果
+		putimage(rect.left, rect.top, &img);
+
+		return true;
+
+	}
+
+};
+
+bool AddEnemy(vector<Enemy*>& es, IMAGE& enemyimg, IMAGE* boom)
+{
+	Enemy* e =new Enemy(enemyimg, abs(rand()) & (swidth - enemyimg.getwidth()), boom);
 	
 	for (auto& i : es)
 	{
@@ -270,22 +340,29 @@ bool Play()
 	bool is_play = true;
 
 	IMAGE heroimg, enemyimg, bkimg, bulletimg;
+	IMAGE eboom[3];
 	loadimage(&heroimg, _T("E:\\LXJ\\C++\\airplane\\airplane\\images\\me1.png"));
 	loadimage(&enemyimg, _T("E:\\LXJ\\C++\\airplane\\airplane\\images\\enemy1.png"));
 	loadimage(&bkimg, _T("E:\\LXJ\\C++\\airplane\\airplane\\images\\bk2.png"), swidth, sheight * 2);
 	loadimage(&bulletimg, _T("E:\\LXJ\\C++\\airplane\\airplane\\images\\bullet1.png"));
+
+	loadimage(&eboom[0], _T("E:\\LXJ\\C++\\airplane\\airplane\\images\\enemy1_down2.png"));
+	loadimage(&eboom[1], _T("E:\\LXJ\\C++\\airplane\\airplane\\images\\enemy1_down3.png"));
+	loadimage(&eboom[2], _T("E:\\LXJ\\C++\\airplane\\airplane\\images\\enemy1_down4.png"));
 
 	BK bk = BK(bkimg);
 	Hero hp = Hero(heroimg);
 
 	vector<Enemy*> es;
 	vector<Bullet*> bs;
+	vector<Enemy_Bullet*> ebs;
 	int bsing = 0;
 
+	clock_t hurtlast = clock();
 	unsigned long long kill = 0;
 	for (int i = 0; i < 5; i++)
 	{
-		AddEnemy(es, enemyimg);
+		AddEnemy(es, enemyimg, eboom);
 		
 
 	}
@@ -294,16 +371,27 @@ bool Play()
 	while (is_play)
 	{
 		bsing++;
-		if (bsing == 10)
+		if (bsing % 10 == 0)
+		{
+			bs.push_back(new Bullet(bulletimg, hp.GetRect()));
+			
+		}
+
+		if (bsing == 60)
 		{
 			bsing = 0;
-			bs.push_back(new Bullet(bulletimg, hp.GetRect()));
+			for (auto& i : es)
+			{
+				ebs.push_back(new Enemy_Bullet(bulletimg, i->GetRect()));//给所有敌机都添加子弹
+
+
+			}
 
 		}
 		BeginBatchDraw();
 		
 		bk.Show();
-		Sleep(6);
+		Sleep(2);
 		flushmessage();
 		Sleep(2);
 		hp.Control();
@@ -323,10 +411,10 @@ bool Play()
 							break;
 						}
 					}
-					
+					Sleep(16);
 
 
-				};//如果没用键盘消息一直动，没有阻塞
+				}//如果没用键盘消息一直动，没有阻塞
 				
 
 			}
@@ -335,25 +423,59 @@ bool Play()
 		
 		hp.Show();
 		
-		for (auto& i : bs)
+		auto bsit = bs.begin();//返回false进行删除
+		while (bsit != bs.end())
 		{
-			i->Shoow();
 
+			if (!(*bsit)->Show())
+			{
+				bsit = bs.erase(bsit);
+			}
+			else
+			{
+				bsit++;//解决页面出界会结束的问题
+			}
+		}
+
+
+		auto ebsit = ebs.begin();//英雄子弹的遍历
+		while (ebsit != ebs.end())
+		{
+
+			if (!(*ebsit)->Show())
+			{
+				ebsit = ebs.erase(ebsit);
+			}
+			else
+			{
+				if (RectCrashRect((*ebsit)->GetRect(), hp.GetRect()))
+				{
+					if (clock() - hurtlast >= hurttime)
+					{
+
+						is_play = hp.hurt();
+						hurtlast = clock();
+					}
+
+
+				}
+				ebsit++;//解决页面出界会结束的问题
+			}
 		}
 
 
 
-
 		auto it = es.begin();
-		while (it != es.end())
+		while (it != es.end())//遍历敌机
 		{
 			if (RectCrashRect((*it)->GetRect(), hp.GetRect()))
 			{
-				is_play = false;
+				is_play = hp.hurt();
+				hurtlast = clock();
 			}
 
 			auto bit = bs.begin();
-			while (bit != bs.end())
+			while (bit != bs.end())//遍历子弹
 			{
 				if (RectCrashRect((*bit)->GetRect(), (*it)->GetRect()))
 				{
@@ -381,12 +503,13 @@ bool Play()
 		}
 		for (int i = 0; i < 5 - es.size(); i++)
 		{
-			AddEnemy(es, enemyimg);
+			AddEnemy(es, enemyimg, eboom);
 
 		}
 		EndBatchDraw();
 
 	}
+	printf_s("e");
 	Over(kill);
 	return true;
 };
