@@ -313,7 +313,22 @@ bool Play()
 			if (v == 0x20)
 			{
 				Sleep(500);
-				while (!_kbhit());//如果没用键盘消息一直动，没有阻塞
+				while(true)
+				{
+					if (_kbhit())
+					{
+						v = _getch();
+						if (v == 0x20)
+						{
+							break;
+						}
+					}
+					
+
+
+				};//如果没用键盘消息一直动，没有阻塞
+				
+
 			}
 
 		}
