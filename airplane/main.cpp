@@ -1,5 +1,5 @@
 //EasyX图形库来实现图形界面
-#include <iostream>
+#include <iostream>//输入输出流头文件
 #include <graphics.h>//easyx的头文件
 #include <string>
 #include<vector>
@@ -8,7 +8,7 @@ using namespace std;
 
 
 constexpr auto swidth =  600;
-constexpr auto sheight = 1100;
+constexpr auto sheight = 1100;//定义宽高，全局变量
 
 constexpr unsigned int SHP = 4;
 constexpr auto hurttime = 1000;//ms
@@ -28,22 +28,22 @@ bool RectCrashRect(RECT &r1, RECT &r2)
 	r.bottom = r1.bottom;
 
 	return (r.left < r2.left && r2.left <= r.right && r.top <= r2.top && r2.top <= r.bottom);
-}
+}//当敌机所在的矩形框和英雄机所在矩形框有重合时，判定为相撞
 //一个开始界面
 void Welcome() {
 
 
-	LPCTSTR title = _T("飞机大战");
+	LPCTSTR title = _T("飞机大战");//LPCTSTR：EasyX中新的数据类型，需要使用_T进行类型转换
 	LPCTSTR tplay = _T("开始游戏");
 	LPCTSTR texit = _T("退出游戏");
 
-	RECT tplayr, texitr;
+	RECT tplayr, texitr;//定义文字矩形框的范围
 	BeginBatchDraw();
-	setbkcolor(WHITE);
+	setbkcolor(WHITE);//背景颜色设置
 	cleardevice();
-	settextstyle(60, 0, _T("黑体"));
-	settextcolor(BLACK);
-	outtextxy(swidth / 2 - textwidth(title) / 2, sheight / 5, title);
+	settextstyle(60, 0, _T("黑体"));//文字格式
+	settextcolor(BLACK);//文字颜色
+	outtextxy(swidth / 2 - textwidth(title) / 2, sheight / 5, title);//屏幕的一半 - 自身宽度的一半（具体图形设计见软件设计画图解释）， 
 	
 	settextstyle(40, 0, _T("黑体"));
 	tplayr.left = swidth / 2 - textwidth(tplay) / 2;
@@ -57,14 +57,14 @@ void Welcome() {
 	texitr.bottom = texitr.top + textheight(texit);
 
 	outtextxy(tplayr.left, tplayr.top,tplay);
-	outtextxy(texitr.left,texitr.top, texit);
+	outtextxy(texitr.left,texitr.top, texit);//开始游戏和退出游戏两个按钮的框架设计
 	EndBatchDraw();
 
 
 	while (true) {
 
 		ExMessage mess;
-		getmessage(&mess, EX_MOUSE);
+		getmessage(&mess, EX_MOUSE);//阻塞函数实现鼠标点击效果
 		if (mess.lbutton)
 		{
 			if (PointInRect(mess.x, mess.y, tplayr))
@@ -117,27 +117,27 @@ void Over(unsigned long long &kill)
 
 }
 
-//背景、敌机、英雄、子弹类
+//背景、敌机、英雄、子弹（英雄机和敌机子弹）类
 
 class BK 
 {
 public:
 	BK(IMAGE& img)
-		:img(img), y(-sheight)
+		:img(img), y(-sheight)//初始化
 	{
 
 	}
 
 	void Show()
 	{
-		if (y == 0) { y = -sheight; }
+		if (y == 0) { y = -sheight; }//背景图片归位
 		y += 4;
 		putimage(0, y, &img);
 
 	}
 private:
 	IMAGE& img;
-	int y;
+	int y;//设置背景图片，每次背景滚动，y++当背景图片到达屏幕低端，图片归位再重新滚动
 };
 
 class Hero 
@@ -149,7 +149,7 @@ public:
 		rect.left = swidth / 2 - img.getwidth() / 2;
 		rect.top = sheight - img.getheight();
 		rect.right = rect.left = img.getwidth();
-		rect.bottom = sheight;
+		rect.bottom = sheight;//英雄机坐标
 
 	}
 	void Show()
@@ -163,7 +163,7 @@ public:
 	void Control()
 	{
 		ExMessage mess;
-		if (peekmessage(&mess, EX_MOUSE))
+		if (peekmessage(&mess, EX_MOUSE))//鼠标事件控制英雄机
 		{
 			rect.left = mess.x - img.getwidth() / 2;
 			rect.top = mess.y - img.getheight() / 2;
@@ -180,7 +180,7 @@ public:
 		HP--;
 		return (HP == 0) ? false : true;
 	}
-	RECT& GetRect() { return rect; }
+	RECT& GetRect() { return rect; }//获取矩形边框
 private:
 	IMAGE& img;
 	RECT rect;
@@ -199,7 +199,7 @@ public:
 		rect.left = x;
 		rect.right = rect.left + img.getwidth();
 		rect.top = -img.getheight();
-		rect.bottom = 0;
+		rect.bottom = 0;//敌机的矩形框
 	}
 	
 	bool Show()
@@ -218,11 +218,11 @@ public:
 		}
 		if (rect.top >= sheight)
 		{ 
-			return false;
+			return false;//飞出画面，敌机销毁
 		}
 		rect.top += 4;
 		rect.bottom += 4;//改变敌机下落速度
-		putimage(rect.left, rect.top, &img);
+		putimage(rect.left, rect.top, &img);//没飞出画面就下落
 
 		return true;
 	}
@@ -259,7 +259,7 @@ public:
 
 	bool Show()
 	{
-		if (rect.bottom <= 0)
+		if (rect.bottom <= 0)//子弹飞出画面
 		{
 			return false;
 		}
@@ -339,7 +339,7 @@ bool Play()
     cleardevice();
 	bool is_play = true;
 
-	IMAGE heroimg, enemyimg, bkimg, bulletimg;
+	IMAGE heroimg, enemyimg, bkimg, bulletimg;//图片库
 	IMAGE eboom[3];
 	loadimage(&heroimg, _T("E:\\LXJ\\C++\\airplane\\airplane\\images\\me1.png"));
 	loadimage(&enemyimg, _T("E:\\LXJ\\C++\\airplane\\airplane\\images\\enemy1.png"));
@@ -391,7 +391,7 @@ bool Play()
 		BeginBatchDraw();
 		
 		bk.Show();
-		Sleep(2);
+		Sleep(2);//延迟
 		flushmessage();
 		Sleep(2);
 		hp.Control();
@@ -477,7 +477,7 @@ bool Play()
 			auto bit = bs.begin();
 			while (bit != bs.end())//遍历子弹
 			{
-				if (RectCrashRect((*bit)->GetRect(), (*it)->GetRect()))
+				if (RectCrashRect((*bit)->GetRect(), (*it)->GetRect()))//相撞判定为游戏结束
 				{
 					delete(*it);
 					it = es.erase(it);
@@ -517,9 +517,9 @@ bool Play()
 
 int main() {
 
-	//easyx初始化
-	initgraph(swidth, sheight, EX_NOMINIMIZE | EX_SHOWCONSOLE);
-	bool is_live = true;
+	//easyx初始化，初始化图形界面
+	initgraph(swidth, sheight, EX_NOMINIMIZE | EX_SHOWCONSOLE);//禁用窗口最小化，显示控制台窗口
+	bool is_live = true;//游戏是否进行循环
 	while (is_live)
 	{
 		Welcome();
